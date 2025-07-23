@@ -1,0 +1,4 @@
+[DEFAULT]
+# DeHashed API Key
+# Get your API key from https://www.dehashed.com/
+DEHASHED_API_KEY = your_api_key_here
