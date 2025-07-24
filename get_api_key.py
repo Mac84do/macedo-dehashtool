@@ -76,3 +76,67 @@ def get_api_key():
     except (NoSectionError, NoOptionError, FileNotFoundError):
         return None
 
+
+def get_api_email():
+    """
+    Retrieve DeHashed API email from secure storage locations.
+    
+    Attempts to retrieve the API email using multiple secure methods with
+    priority given to environment variables for enhanced security.
+    
+    Search Order:
+    1. DEHASHED_EMAIL environment variable (preferred)
+    2. config.ini file [DEFAULT] section (fallback)
+    
+    Returns:
+        str or None: The API email if found, None if no email is available
+        
+    Raises:
+        No exceptions are raised; errors are handled gracefully
+        
+    Example:
+        >>> email = get_api_email()
+        >>> if email:
+        >>>     print("API email loaded successfully")
+        >>> else:
+        >>>     print("No API email found - please configure one")
+    """
+    # Preferred option: Check environment variable
+    api_email = os.getenv('DEHASHED_EMAIL')
+    if api_email:
+        return api_email
+
+    # Fallback option: Check config.ini
+    config = ConfigParser()
+    try:
+        config.read('config.ini')
+        return config.get('DEFAULT', 'DEHASHED_EMAIL')
+    except (NoSectionError, NoOptionError, FileNotFoundError):
+        return None
+
+
+def get_api_credentials():
+    """
+    Retrieve both DeHashed API email and key as a tuple.
+    
+    Convenience function to get both credentials needed for DeHashed API
+    authentication in a single call.
+    
+    Returns:
+        tuple: (email, api_key) if both are found, (None, None) if either is missing
+        
+    Example:
+        >>> email, api_key = get_api_credentials()
+        >>> if email and api_key:
+        >>>     print("Both credentials loaded successfully")
+        >>> else:
+        >>>     print("Missing credentials - please configure both email and API key")
+    """
+    email = get_api_email()
+    api_key = get_api_key()
+    
+    if email and api_key:
+        return email, api_key
+    else:
+        return None, None
+

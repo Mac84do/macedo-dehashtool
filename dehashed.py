@@ -19,13 +19,14 @@ class DeHashedAPIError(DeHashedError):
     pass
 
 
-def search(query: str, api_key: str, max_retries: int = 3) -> Dict[Any, Any]:
+def search(query: str, email: str, api_key: str, max_retries: int = 3) -> Dict[Any, Any]:
     """
     Search the DeHashed API with the given query.
     
     Args:
         query: The search query string
-        api_key: The API key for authentication
+        email: The email address for authentication (username)
+        api_key: The API key for authentication (password)
         max_retries: Maximum number of retry attempts for rate limiting
         
     Returns:
@@ -51,7 +52,7 @@ def search(query: str, api_key: str, max_retries: int = 3) -> Dict[Any, Any]:
                 url,
                 json=payload,
                 headers=headers,
-                auth=(api_key, ""),  # Username = api_key, password = empty string
+                auth=(email, api_key),  # Username = email, password = api_key
                 timeout=30
             )
             

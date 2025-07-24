@@ -13,7 +13,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 from rich.prompt import Prompt, Confirm
-from get_api_key import get_api_key
+from get_api_key import get_api_credentials
 from dehashed import search, DeHashedError, DeHashedRateLimitError, DeHashedAPIError
 from result_extraction import extract_email_password_data, print_extraction_summary, print_dataframe_table
 from pdf_generator import generate_pdf_report
@@ -150,7 +150,7 @@ def confirm_search(search_type, search_value):
     
     return Confirm.ask("Proceed with API search?", default=True)
 
-def perform_api_search(search_type, search_value, api_key):
+def perform_api_search(search_type, search_value, email, api_key):
     """
     Execute the DeHashed API search and process results.
     
@@ -161,6 +161,7 @@ def perform_api_search(search_type, search_value, api_key):
     Args:
         search_type (str): The search type ("1" for domain, "2" for email)
         search_value (str): The search query string entered by user
+        email (str): User's email for authentication
         api_key (str): User's API key for authentication
         
     Returns:
@@ -184,7 +185,7 @@ def perform_api_search(search_type, search_value, api_key):
 
     try:
         # Perform the search
-        response = search(query=search_value, api_key=api_key)
+        response = search(query=search_value, email=email, api_key=api_key)
         
         # Extract results
         original_count = len(response.get('entries', []))
@@ -257,17 +258,17 @@ def main():
         # Print welcome banner
         print_welcome_banner()
         
-        # Check if API key is available
-        api_key = get_api_key()
-        if not api_key:
-            console.print("[red]❌ No API key found![/red]")
-            console.print("\n[yellow]Please set up your API key first:[/yellow]")
-            console.print("1. Set environment variable: DEHASHED_API_KEY=your_key")
-            console.print("2. Or create config.ini from config.ini.example")
-            console.print("\nSee README_API_KEY.md for detailed instructions.")
+        # Check if API credentials are available
+        email, api_key = get_api_credentials()
+        if not email or not api_key:
+            console.print("[red]❌ Missing API credentials![/red]")
+            console.print("\n[yellow]Please set up your API credentials first:[/yellow]")
+            console.print("1. Set environment variables: DEHASHED_EMAIL and DEHASHED_API_KEY")
+            console.print("2. Or update config.ini with both email and API key")
+            console.print("\nSee README.md for detailed instructions.")
             sys.exit(1)
         
-        console.print("[green]✅ API key loaded successfully[/green]")
+        console.print("[green]✅ API credentials loaded successfully[/green]")
         console.print()
         
         # Get search choice
@@ -282,7 +283,7 @@ def main():
         
         # Confirm before API call
         if confirm_search(search_type, search_value):
-            perform_api_search(search_type, search_value, api_key)
+            perform_api_search(search_type, search_value, email, api_key)
         else:
             console.print("[yellow]Search cancelled by user.[/yellow]")
             
