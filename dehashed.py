@@ -34,18 +34,25 @@ def extract_rate_limit_info(headers: Dict[str, str]) -> Dict[str, str]:
     
     # Common rate limit headers that APIs use
     header_mappings = {
-        'x-ratelimit-remaining': 'API Calls Remaining',
-        'x-ratelimit-limit': 'Total API Calls per Period',
+        'x-ratelimit-remaining': 'API Calls Remaining (Rate Limit)',
+        'x-ratelimit-limit': 'Rate Limit per Period',
         'x-ratelimit-reset': 'Rate Limit Reset Time',
         'x-ratelimit-used': 'API Calls Used',
         'x-quota-remaining': 'Quota Remaining',
         'x-quota-limit': 'Quota Limit',
-        'dehashed-ratelimit-remaining': 'DeHashed API Calls Remaining',
-        'dehashed-ratelimit-limit': 'DeHashed API Calls Limit',
-        'ratelimit-remaining': 'API Calls Remaining',
-        'ratelimit-limit': 'API Calls Limit',
-        'rate-limit-remaining': 'API Calls Remaining',
-        'rate-limit-limit': 'API Calls Limit'
+        'x-balance': 'Account Balance',
+        'x-credits': 'Available Credits',
+        'x-credits-remaining': 'Credits Remaining',
+        'dehashed-balance': 'DeHashed Balance',
+        'dehashed-credits': 'DeHashed Credits',
+        'dehashed-ratelimit-remaining': 'DeHashed Rate Limit Remaining',
+        'dehashed-ratelimit-limit': 'DeHashed Rate Limit',
+        'ratelimit-remaining': 'API Calls Remaining (Rate Limit)',
+        'ratelimit-limit': 'Rate Limit',
+        'rate-limit-remaining': 'API Calls Remaining (Rate Limit)',
+        'rate-limit-limit': 'Rate Limit',
+        'balance': 'Account Balance',
+        'credits': 'Available Credits'
     }
     
     # Check for rate limit headers (case-insensitive)
@@ -149,24 +156,40 @@ def search(query: str, email: str, api_key: str, max_retries: int = 3) -> Dict[A
             
             # Handle successful response
             if response.status_code == 200:
+                # Parse response to get balance info
+                try:
+                    response_data = response.json()
+                    balance = response_data.get('balance')
+                except:
+                    response_data = {}
+                    balance = None
+                
                 # Extract and display rate limit information from headers
                 rate_limit_info = extract_rate_limit_info(response.headers)
+                
+                print(f"\n📊 API Usage Information:")
+                
+                # Display account balance/credits if available
+                if balance is not None:
+                    print(f"   💳 Account Credits: {balance}")
+                
+                # Display rate limit info
                 if rate_limit_info:
-                    print(f"\n📊 API Usage Information:")
                     # Display the most important info first (remaining calls)
-                    if 'API Calls Remaining' in rate_limit_info:
-                        remaining = rate_limit_info['API Calls Remaining']
-                        total = rate_limit_info.get('Total API Calls per Period', 'Unknown')
-                        print(f"   🔄 API Calls Remaining: {remaining}/{total}")
+                    if 'API Calls Remaining (Rate Limit)' in rate_limit_info:
+                        remaining = rate_limit_info['API Calls Remaining (Rate Limit)']
+                        total = rate_limit_info.get('Rate Limit per Period', 'Unknown')
+                        print(f"   🔄 Rate Limit: {remaining}/{total} (per period)")
                     
                     # Display other rate limit info
                     for key, value in rate_limit_info.items():
-                        if key not in ['API Calls Remaining', 'Total API Calls per Period']:
+                        if key not in ['API Calls Remaining (Rate Limit)', 'Rate Limit per Period']:
                             print(f"   {key}: {value}")
-                    print()  # Empty line for better readability
+                
+                print()  # Empty line for better readability
                 
                 try:
-                    return response.json()
+                    return response_data if response_data else response.json()
                 except json.JSONDecodeError as e:
                     raise DeHashedError(f"Failed to parse JSON response: {e}")
             
