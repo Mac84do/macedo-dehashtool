@@ -15,71 +15,77 @@ from rich.text import Text
 
 def extract_email_password_data(api_response: Dict[Any, Any]) -> pd.DataFrame:
     """
-    Parse the JSON response's `entries` list and build a pandas DataFrame
-    containing only `email` and `password` columns, dropping rows with null values.
-    
+    Extract email and password data from DeHashed API response.
+    Handles multiple data formats:
+    1. password field as list with email;password format
+    2. separate email and password fields (both as lists or strings)
+    3. entries with only email but no password
+
     Args:
         api_response: Dictionary containing the Dehashed API response
-        
+
     Returns:
-        pandas.DataFrame: DataFrame with 'email' and 'password' columns,
-                         with null values dropped
-        
-    Raises:
-        KeyError: If 'entries' key is not found in the response
-        ValueError: If the response format is invalid
+        pandas.DataFrame: DataFrame with 'email' and 'password' columns
     """
-    # Check if the response contains the 'entries' key
     if 'entries' not in api_response:
         raise KeyError("'entries' key not found in API response")
-    
+
     entries = api_response['entries']
-    
-    # Validate that entries is a list
     if not isinstance(entries, list):
         raise ValueError("'entries' must be a list")
-    
-    # Extract email and password data from entries
+
     extracted_data = []
-    
+
     for entry in entries:
-        if not isinstance(entry, dict):
-            continue  # Skip non-dictionary entries
-            
-        # Extract email and password, handling missing keys gracefully
-        email = entry.get('email')
-        password = entry.get('password')
-        
-        # Only include entries that have both email and password
-        # (we'll drop nulls later, but this ensures we have the structure)
-        extracted_data.append({
-            'email': email,
-            'password': password
-        })
-    
-    # Create DataFrame
+        # Method 1: password field contains email;password format
+        if 'password' in entry:
+            password_data = entry['password']
+            if isinstance(password_data, list):
+                for p in password_data:
+                    if ';' in str(p):
+                        email_pass = str(p).split(';')
+                        if len(email_pass) == 2:
+                            extracted_data.append({
+                                'email': email_pass[0].strip(),
+                                'password': email_pass[1].strip()
+                            })
+                    # Method 2: password is just the password, get email from email field
+                    elif 'email' in entry:
+                        email_data = entry['email']
+                        emails = email_data if isinstance(email_data, list) else [email_data]
+                        for email in emails:
+                            if email:  # Skip None/empty emails
+                                extracted_data.append({
+                                    'email': str(email).strip(),
+                                    'password': str(p).strip()
+                                })
+            elif isinstance(password_data, str) and 'email' in entry:
+                # Single password string with separate email field
+                email_data = entry['email']
+                emails = email_data if isinstance(email_data, list) else [email_data]
+                for email in emails:
+                    if email:  # Skip None/empty emails
+                        extracted_data.append({
+                            'email': str(email).strip(),
+                            'password': str(password_data).strip()
+                        })
+
     df = pd.DataFrame(extracted_data)
-    
-    # Handle empty DataFrame case
+
     if df.empty:
         return pd.DataFrame(columns=['email', 'password'])
-    
-    # Drop rows where either email or password is null/None/empty
+
+    # Remove duplicates
+    df = df.drop_duplicates()
+
+    # Drop rows with null/empty values
     df_cleaned = df.dropna(subset=['email', 'password'])
-    
-    # Handle case where all rows were dropped
-    if df_cleaned.empty:
-        return pd.DataFrame(columns=['email', 'password'])
-    
-    # Also drop rows where email or password are empty strings
     df_cleaned = df_cleaned[
         (df_cleaned['email'].str.strip() != '') & 
         (df_cleaned['password'].str.strip() != '')
     ]
-    
-    # Reset index after dropping rows
+
     df_cleaned = df_cleaned.reset_index(drop=True)
-    
     return df_cleaned
 
 

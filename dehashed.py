@@ -1,6 +1,7 @@
 import requests
 import time
 import json
+import base64
 from typing import Dict, Any
 
 
@@ -38,10 +39,31 @@ def search(query: str, email: str, api_key: str, max_retries: int = 3) -> Dict[A
         DeHashedError: For other general errors
     """
     url = "https://api.dehashed.com/v2/search"
+    
     headers = {
+        "Dehashed-Api-Key": api_key,
         "Content-Type": "application/json"
     }
-    payload = {"query": query}
+    # For domain searches, try using the domain: prefix format
+    if '@' not in query and '.' in query:  # Likely a domain
+        formatted_query = f"domain:{query}"
+    else:
+        formatted_query = query
+        
+    payload = {
+        "query": formatted_query, 
+        "size": 10000,
+        "page": 1  # Add pagination parameter
+    }
+    
+    print(f"Debug: Formatted query: {formatted_query}")
+    
+    # Debug output
+    print(f"Debug: Email provided: {email[:10] + '...' if len(email) > 10 else email}" if email else "Debug: No email provided")
+    print(f"Debug: API key provided: {api_key[:10] + '...' if len(api_key) > 10 else api_key}" if api_key else "Debug: No API key provided")
+    print(f"Debug: Query: {query}")
+    print(f"Debug: URL: {url}")
+    print(f"Debug: Using Dehashed-Api-Key header")
     
     retry_count = 0
     base_delay = 1  # Initial delay in seconds
@@ -52,7 +74,6 @@ def search(query: str, email: str, api_key: str, max_retries: int = 3) -> Dict[A
                 url,
                 json=payload,
                 headers=headers,
-                auth=(email, api_key),  # Username = email, password = api_key
                 timeout=30
             )
             

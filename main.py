@@ -187,8 +187,28 @@ def perform_api_search(search_type, search_value, email, api_key):
         # Perform the search
         response = search(query=search_value, email=email, api_key=api_key)
         
+        # Debug: Print raw response info
+        print(f"Debug: Raw response keys: {list(response.keys())}")
+        entries = response.get('entries', [])
+        print(f"Debug: Number of entries: {len(entries)}")
+        print(f"Debug: Total in response: {response.get('total', 'N/A')}")
+        
+        if entries and len(entries) > 0:
+            print(f"Debug: First entry keys: {list(entries[0].keys())}")
+            print(f"Debug: First entry sample: {entries[0]}")
+            
+            # Check if there are different structures in other entries
+            for i, entry in enumerate(entries[:5]):  # Check first 5 entries
+                print(f"Debug: Entry {i} keys: {list(entry.keys())}")
+                if 'email' in entry:
+                    print(f"Debug: Entry {i} has email field: {entry.get('email')}")
+                if 'username' in entry:
+                    print(f"Debug: Entry {i} has username field: {entry.get('username')}")
+                if 'domain' in entry:
+                    print(f"Debug: Entry {i} has domain field: {entry.get('domain')}")
+        
         # Extract results
-        original_count = len(response.get('entries', []))
+        original_count = len(entries)
         df = extract_email_password_data(response)
 
         # Print results
