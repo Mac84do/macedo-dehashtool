@@ -1,4 +1,7 @@
 [DEFAULT]
-# DeHashed API Key
+# DeHashed API Configuration
 # Get your API key from https://www.dehashed.com/
+# Email: Your registered email address for DeHashed account
+# API Key: Your API key from the dashboard
+DEHASHED_EMAIL = your_email@example.com
 DEHASHED_API_KEY = your_api_key_here
