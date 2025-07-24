@@ -156,16 +156,11 @@ def create_pdf_from_csv(csv_file_path: str, output_pdf_path: Optional[str] = Non
             table_data = [['Email', 'Password']]  # Header row
             
             # Add all data rows - no truncation
-            console.print(f"[cyan]Processing {record_count} records for PDF table...[/cyan]")
             for i in range(record_count):
                 row = df.iloc[i]
                 email = str(row['email']) if pd.notna(row['email']) else ''
                 password = str(row['password']) if pd.notna(row['password']) else ''
                 table_data.append([email, password])
-            
-            # Debug: Print actual table data length
-            console.print(f"[cyan]Table data contains {len(table_data)} rows (including header)[/cyan]")
-            console.print(f"[cyan]Expected: 1 header + {record_count} data rows = {record_count + 1} total[/cyan]")
             
             # Create table with wider columns to utilize available space
             data_table = Table(table_data, colWidths=[2.7*inch, 2.7*inch])
