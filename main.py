@@ -225,11 +225,39 @@ def perform_api_search(search_type, search_value, email, api_key):
             output_dir = 'output'
             try:
                 os.makedirs(output_dir, exist_ok=True)
-            except PermissionError:
+                
+                # On Windows, set full permissions to avoid Errno 13 issues
+                if os.name == 'nt':  # Windows
+                    try:
+                        import stat
+                        os.chmod(output_dir, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
+                        console.print(f"[green]Set full permissions on output directory[/green]")
+                    except Exception as chmod_e:
+                        console.print(f"[yellow]Warning: Could not set directory permissions: {chmod_e}[/yellow]")
+                
+                console.print(f"[green]Using output directory: {os.path.abspath(output_dir)}[/green]")
+            except PermissionError as e:
+                console.print(f"[red]Permission denied creating directory: {os.path.abspath(output_dir)}[/red]")
+                console.print(f"[red]Error details: {str(e)}[/red]")
                 # Fallback to user's home directory if permission denied
                 output_dir = os.path.expanduser('~/dehashed_output')
-                os.makedirs(output_dir, exist_ok=True)
-                console.print(f"[yellow]Warning: Using fallback directory {output_dir} due to permissions[/yellow]")
+                try:
+                    os.makedirs(output_dir, exist_ok=True)
+                    # Set permissions on fallback directory too
+                    if os.name == 'nt':  # Windows
+                        try:
+                            import stat
+                            os.chmod(output_dir, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
+                        except Exception:
+                            pass  # Ignore chmod errors on fallback
+                    console.print(f"[yellow]Warning: Using fallback directory {output_dir} due to permissions[/yellow]")
+                except Exception as fallback_e:
+                    console.print(f"[red]Failed to create fallback directory: {str(fallback_e)}[/red]")
+                    return
+            except Exception as e:
+                console.print(f"[red]Unexpected error creating output directory: {str(e)}[/red]")
+                console.print(f"[red]Error type: {type(e).__name__}[/red]")
+                return
             
             # Create file name
             # Sanitize query for filename (replace spaces and special characters)
@@ -237,8 +265,49 @@ def perform_api_search(search_type, search_value, email, api_key):
             file_name = f"{output_dir}/{date_str}_{query}.csv"
             
             # Save to CSV
-            df.to_csv(file_name, index=False)
-            console.print(f"[green]✅ Dataframe saved to {file_name}[/green]")
+            console.print(f"[cyan]Attempting to save to: {file_name}[/cyan]")
+            console.print(f"[cyan]File exists: {os.path.exists(file_name)}[/cyan]")
+            console.print(f"[cyan]Directory writable: {os.access(os.path.dirname(file_name), os.W_OK)}[/cyan]")
+            
+            try:
+                # Check if file is locked by another process
+                if os.path.exists(file_name):
+                    try:
+                        # Try to open in append mode to check if it's locked
+                        with open(file_name, 'a'):
+                            pass
+                        console.print(f"[cyan]File not locked, proceeding...[/cyan]")
+                    except PermissionError:
+                        console.print(f"[yellow]File appears to be locked, will try to overwrite...[/yellow]")
+                
+                df.to_csv(file_name, index=False)
+                console.print(f"[green]✅ Dataframe saved to {file_name}[/green]")
+            except PermissionError as e:
+                console.print(f"[red]❌ Permission denied writing to {file_name}[/red]")
+                console.print(f"[red]Error details: {str(e)}[/red]")
+                # Try alternative location
+                home_output_dir = os.path.expanduser('~/dehashed_output')
+                os.makedirs(home_output_dir, exist_ok=True)
+                # Set permissions on alternative directory
+                if os.name == 'nt':  # Windows
+                    try:
+                        import stat
+                        os.chmod(home_output_dir, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
+                    except Exception:
+                        pass  # Ignore chmod errors
+                alt_file_name = file_name.replace(output_dir, home_output_dir)
+                console.print(f"[yellow]Trying alternative location: {alt_file_name}[/yellow]")
+                try:
+                    df.to_csv(alt_file_name, index=False)
+                    console.print(f"[green]✅ Dataframe saved to {alt_file_name}[/green]")
+                    file_name = alt_file_name  # Update for PDF generation
+                except Exception as alt_e:
+                    console.print(f"[red]❌ Failed to save to alternative location: {str(alt_e)}[/red]")
+                    return
+            except Exception as e:
+                console.print(f"[red]❌ Unexpected error saving CSV: {str(e)}[/red]")
+                console.print(f"[red]Error type: {type(e).__name__}[/red]")
+                return
             
             # Generate PDF report
             try:
