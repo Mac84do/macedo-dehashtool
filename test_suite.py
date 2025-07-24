@@ -111,7 +111,7 @@ class TestRateLimitHandler(unittest.TestCase):
         
         mock_post.side_effect = [mock_response_429, mock_response_200]
         
-        result = search(query='test@example.com', api_key='test_key', max_retries=1)
+        result = search(query='test@example.com', email='test@email.com', api_key='test_key', max_retries=1)
         
         self.assertEqual(result, {'success': True, 'entries': []})
         self.assertEqual(mock_post.call_count, 2)
@@ -133,7 +133,7 @@ class TestRateLimitHandler(unittest.TestCase):
         
         mock_post.side_effect = [mock_response_429, mock_response_200]
         
-        result = search(query='test@example.com', api_key='test_key', max_retries=1)
+        result = search(query='test@example.com', email='test@email.com', api_key='test_key', max_retries=1)
         
         self.assertEqual(result, {'success': True, 'entries': []})
         self.assertEqual(mock_post.call_count, 2)
@@ -149,7 +149,7 @@ class TestRateLimitHandler(unittest.TestCase):
         mock_post.return_value = mock_response
         
         with self.assertRaises(DeHashedRateLimitError) as context:
-            search(query='test@example.com', api_key='test_key', max_retries=0)
+            search(query='test@example.com', email='test@email.com', api_key='test_key', max_retries=0)
         
         self.assertIn('Rate limit exceeded', str(context.exception))
         console.print("[green]✅ Rate limit max retries exceeded test passed[/green]")
@@ -163,7 +163,7 @@ class TestRateLimitHandler(unittest.TestCase):
         mock_post.return_value = mock_response
         
         with self.assertRaises(DeHashedAPIError) as context:
-            search(query='test@example.com', api_key='invalid_key')
+            search(query='test@example.com', email='test@email.com', api_key='invalid_key')
         
         self.assertIn('401', str(context.exception))
         self.assertIn('Unauthorized', str(context.exception))
@@ -297,7 +297,7 @@ class TestDryRunMode(unittest.TestCase):
         mock_post.return_value = mock_response
         
         # Perform search
-        result = search(query='example.com', api_key='dry_run_key')
+        result = search(query='example.com', email='test@email.com', api_key='dry_run_key')
         
         # Verify response structure
         self.assertTrue(result['success'])
@@ -307,8 +307,8 @@ class TestDryRunMode(unittest.TestCase):
         # Verify API call was made correctly
         mock_post.assert_called_once()
         call_args = mock_post.call_args
-        self.assertEqual(call_args[1]['json']['query'], 'example.com')
-        self.assertEqual(call_args[1]['auth'], ('dry_run_key', ''))
+        self.assertEqual(call_args[1]['json']['query'], 'domain:example.com')  # Query gets domain: prefix
+        # Note: No longer using auth parameter, using Dehashed-Api-Key header instead
         
         console.print("[green]✅ Dry-run successful search test passed[/green]")
     
@@ -351,7 +351,7 @@ class TestDryRunMode(unittest.TestCase):
         mock_post.return_value = mock_response
         
         # Perform search and extract data
-        api_response = search(query='example.com', api_key='dry_run_key')
+        api_response = search(query='example.com', email='test@email.com', api_key='dry_run_key')
         df = extract_email_password_data(api_response)
         
         # Verify extracted data (should only have valid email/password pairs)
@@ -383,7 +383,7 @@ class TestDryRunMode(unittest.TestCase):
         mock_post.return_value = mock_response
         
         # Test the search function with mocked requests
-        result = search(query='mockdomain.com', api_key='no_real_key')
+        result = search(query='mockdomain.com', email='test@email.com', api_key='no_real_key')
         
         self.assertTrue(result['success'])
         self.assertEqual(result['entries'][0]['email'], 'test@mockdomain.com')
@@ -430,7 +430,7 @@ class TestIntegrationScenarios(unittest.TestCase):
         mock_post.return_value = mock_response
         
         # Step 1: API search
-        api_response = search(query='testdomain.com', api_key='test_key')
+        api_response = search(query='testdomain.com', email='test@email.com', api_key='test_key')
         
         # Step 2: Extract data
         df = extract_email_password_data(api_response)
