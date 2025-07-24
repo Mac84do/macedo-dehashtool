@@ -223,7 +223,13 @@ def perform_api_search(search_type, search_value, email, api_key):
             
             # Create output directory if it doesn't exist
             output_dir = 'output'
-            os.makedirs(output_dir, exist_ok=True)
+            try:
+                os.makedirs(output_dir, exist_ok=True)
+            except PermissionError:
+                # Fallback to user's home directory if permission denied
+                output_dir = os.path.expanduser('~/dehashed_output')
+                os.makedirs(output_dir, exist_ok=True)
+                console.print(f"[yellow]Warning: Using fallback directory {output_dir} due to permissions[/yellow]")
             
             # Create file name
             # Sanitize query for filename (replace spaces and special characters)
@@ -238,6 +244,12 @@ def perform_api_search(search_type, search_value, email, api_key):
             try:
                 pdf_path = generate_pdf_report(file_name)
                 console.print(f"[green]✅ PDF report saved to {pdf_path}[/green]")
+            except ImportError as e:
+                if 'reportlab' in str(e):
+                    console.print(f"[yellow]⚠️  PDF generation skipped: reportlab not installed[/yellow]")
+                    console.print(f"[yellow]💡 Install with: pip install reportlab[/yellow]")
+                else:
+                    console.print(f"[yellow]⚠️  PDF generation failed: missing dependency {e}[/yellow]")
             except Exception as e:
                 console.print(f"[yellow]⚠️  PDF generation failed: {str(e)}[/yellow]")
         else:
