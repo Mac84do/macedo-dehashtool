@@ -20,6 +20,58 @@ class DeHashedAPIError(DeHashedError):
     pass
 
 
+def extract_rate_limit_info(headers: Dict[str, str]) -> Dict[str, str]:
+    """
+    Extract rate limit information from API response headers.
+    
+    Args:
+        headers: Dictionary of HTTP response headers
+        
+    Returns:
+        Dictionary containing rate limit information, or empty dict if not found
+    """
+    rate_limit_info = {}
+    
+    # Common rate limit headers that APIs use
+    header_mappings = {
+        'x-ratelimit-remaining': 'API Calls Remaining',
+        'x-ratelimit-limit': 'Total API Calls per Period',
+        'x-ratelimit-reset': 'Rate Limit Reset Time',
+        'x-ratelimit-used': 'API Calls Used',
+        'x-quota-remaining': 'Quota Remaining',
+        'x-quota-limit': 'Quota Limit',
+        'dehashed-ratelimit-remaining': 'DeHashed API Calls Remaining',
+        'dehashed-ratelimit-limit': 'DeHashed API Calls Limit',
+        'ratelimit-remaining': 'API Calls Remaining',
+        'ratelimit-limit': 'API Calls Limit',
+        'rate-limit-remaining': 'API Calls Remaining',
+        'rate-limit-limit': 'API Calls Limit'
+    }
+    
+    # Check for rate limit headers (case-insensitive)
+    for header_name, display_name in header_mappings.items():
+        for actual_header, value in headers.items():
+            if actual_header.lower() == header_name.lower():
+                rate_limit_info[display_name] = value
+                break
+    
+    # Special handling for reset time (convert timestamp if needed)
+    if 'Rate Limit Reset Time' in rate_limit_info:
+        reset_value = rate_limit_info['Rate Limit Reset Time']
+        try:
+            # If it's a Unix timestamp, convert to readable time
+            import datetime
+            timestamp = int(reset_value)
+            if timestamp > 1000000000:  # Looks like a Unix timestamp
+                reset_time = datetime.datetime.fromtimestamp(timestamp)
+                rate_limit_info['Rate Limit Reset Time'] = reset_time.strftime('%Y-%m-%d %H:%M:%S')
+        except (ValueError, TypeError):
+            # Keep original value if conversion fails
+            pass
+    
+    return rate_limit_info
+
+
 def search(query: str, email: str, api_key: str, max_retries: int = 3) -> Dict[Any, Any]:
     """
     Search the DeHashed API with the given query.
@@ -56,14 +108,9 @@ def search(query: str, email: str, api_key: str, max_retries: int = 3) -> Dict[A
         "page": 1  # Add pagination parameter
     }
     
-    print(f"Debug: Formatted query: {formatted_query}")
-    
-    # Debug output
-    print(f"Debug: Email provided: {email[:10] + '...' if len(email) > 10 else email}" if email else "Debug: No email provided")
-    print(f"Debug: API key provided: {api_key[:10] + '...' if len(api_key) > 10 else api_key}" if api_key else "Debug: No API key provided")
-    print(f"Debug: Query: {query}")
-    print(f"Debug: URL: {url}")
-    print(f"Debug: Using Dehashed-Api-Key header")
+    # Only show formatted query for transparency
+    if formatted_query != query:
+        print(f"🔍 Search query formatted as: {formatted_query}")
     
     retry_count = 0
     base_delay = 1  # Initial delay in seconds
@@ -102,6 +149,22 @@ def search(query: str, email: str, api_key: str, max_retries: int = 3) -> Dict[A
             
             # Handle successful response
             if response.status_code == 200:
+                # Extract and display rate limit information from headers
+                rate_limit_info = extract_rate_limit_info(response.headers)
+                if rate_limit_info:
+                    print(f"\n📊 API Usage Information:")
+                    # Display the most important info first (remaining calls)
+                    if 'API Calls Remaining' in rate_limit_info:
+                        remaining = rate_limit_info['API Calls Remaining']
+                        total = rate_limit_info.get('Total API Calls per Period', 'Unknown')
+                        print(f"   🔄 API Calls Remaining: {remaining}/{total}")
+                    
+                    # Display other rate limit info
+                    for key, value in rate_limit_info.items():
+                        if key not in ['API Calls Remaining', 'Total API Calls per Period']:
+                            print(f"   {key}: {value}")
+                    print()  # Empty line for better readability
+                
                 try:
                     return response.json()
                 except json.JSONDecodeError as e:
