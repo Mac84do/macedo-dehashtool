@@ -326,11 +326,44 @@ def perform_api_search(search_type, search_value, email, api_key):
                     console.print(f"[yellow]⚠️  PDF generation failed: missing dependency {e}[/yellow]")
             except Exception as e:
                 console.print(f"[yellow]⚠️  PDF generation failed: {str(e)}[/yellow]")
+            
+            # Offer to crack hashes
+            hash_columns = list_hash_columns(df)
+            if hash_columns:
+                hash_confirm = Confirm.ask("Do you want to attempt to crack the hashes? (y/n)", default=False)
+                if hash_confirm:
+                    cracked_results = perform_hash_cracking(df, hash_columns)
+                    if cracked_results is not None:
+                        df = df.merge(cracked_results, on=list(cracked_results.columns.drop('plaintext_password')), how='left')
+                        
+                        # Save cracked results
+                        cracked_file_name = file_name.replace('.csv', '_cracked.csv')
+                        df.to_csv(cracked_file_name, index=False)
+                        console.print(f"[green]✅ Cracked results saved to {cracked_file_name}[/green]")
+
+                        # Generate updated PDF
+                        try:
+                            hash_cracking_data = {
+                                'hashes_attempted': len(cracked_results),
+                                'hashes_cracked': cracked_results['plaintext_password'].notnull().sum()
+                            }
+                            pdf_path = create_pdf_from_dataframe_v2(
+                                df,
+                                query,
+                                hash_crack_results=hash_cracking_data,
+                                output_pdf_path=file_name.replace('.csv', '.pdf')
+                            )
+                            console.print(f"[green]✅ Updated PDF report saved to {pdf_path}[/green]")
+                        except Exception as e:
+                            console.print(f"[yellow]⚠️  Failed to update PDF report: {str(e)}[/yellow]")
+            return True
         else:
             console.print("[bold red]No valid email/password pairs found.[/bold red]")
+            return False
 
     except (DeHashedRateLimitError, DeHashedAPIError, DeHashedError) as e:
         console.print(f"[bold red]Error:[/bold red] {str(e)}")
+        return False
 
 def perform_hash_cracking(df: pd.DataFrame, hash_columns: List[str]) -> Optional[pd.DataFrame]:
     """
@@ -447,41 +480,12 @@ def main():
         
         # Confirm before API call
         if confirm_search(search_type, search_value):
-            perform_api_search(search_type, search_value, email, api_key)
-            
-            hash_columns = list_hash_columns(df)
-            if hash_columns:
-                hash_confirm = Confirm.ask("Do you want to attempt to crack the hashes? (y/n)", default=False)
-                if hash_confirm:
-                    cracked_results = perform_hash_cracking(df, hash_columns)
-                    if cracked_results is not None:
-                        df = df.merge(cracked_results, on=hash_columns, how='left')
-                        
-                        # Save cracked results
-                        cracked_file_name = file_name.replace('.csv', '_cracked.csv')
-                        df.to_csv(cracked_file_name, index=False)
-                        console.print(f"[green]✅ Cracked results saved to {cracked_file_name}[/green]")
-
-                        # Generate updated PDF
-                        try:
-                            hash_cracking_data = {
-                                'hashes_attempted': len(cracked_results),
-                                'hashes_cracked': cracked_results['plaintext_password'].notnull().sum()
-                            }
-                            pdf_path = create_pdf_from_dataframe_v2(
-                                df,
-                                query,
-                                hash_crack_results=hash_cracking_data,
-                                output_pdf_path=file_name.replace('.csv', '.pdf')
-                            )
-                            console.print(f"[green]✅ Updated PDF report saved to {pdf_path}[/green]")
-                        except Exception as e:
-                            console.print(f"[yellow]⚠️  Failed to update PDF report: {str(e)}[/yellow]")
-
-            console.print(f"[green]Final statistics for query '{search_value}':")
-            console.print(f"Total entries processed: {len(df)}")
-            console.print(f"Cracked passwords: {df['plaintext_password'].notnull().sum() if 'plaintext_password' in df.columns else 0}")
-            console.print("[green]✅ Process completed successfully.[/green]")
+            # Perform API search and handle results within the function
+            success = perform_api_search(search_type, search_value, email, api_key)
+            if success:
+                console.print("[green]✅ Process completed successfully.[/green]")
+            else:
+                console.print("[red]❌ Search failed or returned no results.[/red]")
         else:
             console.print("[yellow]Search cancelled by user.[/yellow]")
             
