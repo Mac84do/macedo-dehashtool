@@ -14,6 +14,7 @@ import os
 import sys
 import tempfile
 import shutil
+import json
 from unittest.mock import patch, MagicMock
 import pandas as pd
 import requests_mock
@@ -23,6 +24,7 @@ from rich.console import Console
 from result_extraction_v2 import extract_all_fields, list_hash_columns
 from main_v2 import perform_api_search
 from hash_cracking import detect_tools
+from dehashed import search
 
 console = Console()
 
@@ -159,34 +161,25 @@ class TestComprehensiveValidation(unittest.TestCase):
         
         console.print("[green]✅ Sample hash cracking test setup passed[/green]")
         console.print(f"[yellow]Sample hash file created at: {hash_file}[/yellow]")
-    
-    def test_csv_output_validation(self):
-        """Verify CSV output matches expectations."""
-        # Create sample data
-        sample_data = {
-            'email': ['user1@example.com', 'user2@test.org', 'admin@company.net'],
-            'password': ['password123', 'secret456', 'admin789'],
-            'username': ['user1', 'user2', 'admin'],
-            'domain': ['example.com', 'test.org', 'company.net']
-        }
-        df = pd.DataFrame(sample_data)
+
+    @patch('requests.post')
+    def test_mocked_dehashed_response(self, mock_post):
+        """Use a mocked DeHashed API response with both plaintext and hash-only records."""
+        with open('test_fixtures/mock_dehashed_response.json') as f:
+            mock_response = json.load(f)
         
-        # Save to CSV
-        csv_file = os.path.join(self.test_dir, 'test_output.csv')
-        df.to_csv(csv_file, index=False)
+        mock_post.return_value.status_code = 200
+        mock_post.return_value.json.return_value = mock_response
+
+        response = search('example_query', 'test_user@example.com', 'fake_api_key_for_testing_12345abcde')
+
+        # Assert the mock was called
+        mock_post.assert_called_once()
         
-        # Verify CSV file exists
-        self.assertTrue(os.path.exists(csv_file))
-        
-        # Load and verify CSV content
-        loaded_df = pd.read_csv(csv_file)
-        self.assertEqual(len(loaded_df), 3)
-        self.assertListEqual(list(loaded_df.columns), ['email', 'password', 'username', 'domain'])
-        
-        # Verify data integrity
-        pd.testing.assert_frame_equal(df, loaded_df)
-        
-        console.print("[green]✅ CSV output validation passed[/green]")
+        # Verify the response matches expected mock response
+        self.assertEqual(response, mock_response)
+
+        console.print("[green]✅ Mocked DeHashed response test passed[/green]")
     
     def test_cracked_csv_output_validation(self):
         """Verify cracked CSV output includes plaintext passwords."""

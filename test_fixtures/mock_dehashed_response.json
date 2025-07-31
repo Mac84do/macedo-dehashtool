@@ -1,0 +1,68 @@
+{
+  "success": true,
+  "took": 42,
+  "total": 4,
+  "balance": 9876,
+  "size": 4,
+  "page": 1,
+  "entries": [
+    {
+      "id": "123456789",
+      "email": "user1@example.com",
+      "username": "user1_plaintext",
+      "password": "MyPlainTextPassword123!",
+      "hashed_password": "",
+      "hash": "",
+      "ip_address": "192.168.1.100",
+      "name": "John Doe",
+      "phone": "+1-555-0123",
+      "address": "123 Main St, Anytown",
+      "obtained_from": "DataBreach2023",
+      "date_created": "2023-03-15T10:30:00Z"
+    },
+    {
+      "id": "987654321",
+      "email": "admin@testdomain.org", 
+      "username": "admin_hashed",
+      "password": "",
+      "hashed_password": "5d41402abc4b2a76b9719d911017c592",
+      "hash": "5d41402abc4b2a76b9719d911017c592",
+      "hash_type": "MD5",
+      "ip_address": "10.0.0.50",
+      "name": "Jane Smith",
+      "phone": "+1-555-0456",
+      "address": "456 Oak Ave, Somewhere",
+      "obtained_from": "OldLeak2022",
+      "date_created": "2022-11-20T14:45:00Z"
+    },
+    {
+      "id": "555777999",
+      "email": "support@company.net",
+      "username": "support_plain",
+      "password": "SupportPass2024",
+      "hashed_password": "",
+      "hash": "",
+      "ip_address": "172.16.0.25",
+      "name": "Support Team",
+      "phone": "+1-800-555-HELP",
+      "address": "789 Business Blvd, Corporate City",
+      "obtained_from": "RecentBreach2024",
+      "date_created": "2024-01-10T09:15:00Z"
+    },
+    {
+      "id": "111222333",
+      "email": "dev@startup.io",
+      "username": "developer_hash",
+      "password": "",
+      "hashed_password": "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LegBfKC9.L1ktLOga",
+      "hash": "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LegBfKC9.L1ktLOga",
+      "hash_type": "BCRYPT",
+      "ip_address": "203.0.113.42",
+      "name": "Dev User",
+      "phone": "+1-555-0789",
+      "address": "321 Tech Park, Innovation District",
+      "obtained_from": "StartupLeak2023",
+      "date_created": "2023-08-30T16:20:00Z"
+    }
+  ]
+}
