@@ -1,6 +1,31 @@
 # Dehashed API Tool
 
-A powerful command-line interface for interacting with the DeHashed API to search for compromised credentials by domain or email address. This tool provides an intuitive interface with rich text formatting, automated result processing, and comprehensive reporting capabilities.
+🔍 **A powerful command-line interface for interacting with the DeHashed API** to search for compromised credentials by domain or email address. This tool provides an intuitive interface with rich text formatting, automated result processing, comprehensive reporting capabilities, and **integrated hash cracking functionality**.
+
+## 🚀 v2 Quick-Start Guide
+
+**New to v2? Get started in 3 minutes:**
+
+```bash
+# 1. Clone and setup
+git clone https://github.com/yourusername/dehashed-tool.git
+cd dehashed-tool
+pip install -r requirements.txt
+
+# 2. Set API credentials (get from dehashed.com)
+export DEHASHED_EMAIL="your-email@example.com"
+export DEHASHED_API_KEY="your-api-key-here"
+
+# 3. Run v2 with enhanced features
+python main_v2.py
+```
+
+**✨ What's New in v2:**
+- 🔓 **Hash Cracking Integration**: Automatic hashcat/john integration
+- 📊 **Enhanced Rich Tables**: Beautiful terminal output with color coding
+- 🧠 **Dynamic Field Extraction**: Captures ALL API fields automatically
+- 📄 **Improved PDF Reports**: Enhanced layout with cracking statistics
+- 🔧 **Tool Coexistence**: v1 and v2 run side-by-side
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.7+-green.svg)
@@ -113,7 +138,14 @@ You can verify your API key works by visiting the DeHashed API documentation or 
 
 3. **Install Dependencies**
    ```bash
+   # Install core dependencies
    pip install -r requirements.txt
+   
+   # Or install v2 specific requirements
+   pip install -r requirements_v2.txt
+   
+   # For manual installation of core packages:
+   pip install requests pandas rich reportlab python-dotenv
    ```
 
 4. **Configure API Key** (See Environment Variables section below)
@@ -227,6 +259,165 @@ python dry_run_demo.py
 # Simple usage demonstration
 python simple_demo.py
 ```
+
+## 🔓 Hash Cracking Integration (v2)
+
+**v2 features integrated hash cracking capabilities using popular tools like hashcat and john.**
+
+### Prerequisites for Hash Cracking
+
+**Required Tools:**
+- **Hashcat**: Download from [https://hashcat.net/hashcat/](https://hashcat.net/hashcat/)
+- **John the Ripper**: Download from [https://www.openwall.com/john/](https://www.openwall.com/john/)
+
+**Installation:**
+
+```bash
+# Ubuntu/Debian
+sudo apt update
+sudo apt install hashcat john
+
+# Windows (using Chocolatey)
+choco install hashcat
+# John needs manual installation on Windows
+
+# macOS (using Homebrew)
+brew install hashcat john
+```
+
+**Wordlists:**
+```bash
+# Download popular wordlists
+wget https://github.com/danielmiessler/SecLists/raw/master/Passwords/Leaked-Databases/rockyou.txt.tar.gz
+tar -xzf rockyou.txt.tar.gz
+
+# Or use system wordlists
+# Linux: /usr/share/wordlists/
+# Kali: /usr/share/wordlists/rockyou.txt
+```
+
+### Hash Cracking Workflow
+
+**1. Run v2 with Hash Detection:**
+```bash
+python main_v2.py
+```
+
+**2. Automatic Hash Detection:**
+- v2 automatically detects hash columns in API responses
+- Supports: MD5, SHA1, SHA256, SHA512, NTLM, bcrypt, and more
+- Uses pattern matching and data analysis for detection
+
+**3. Interactive Cracking Process:**
+```
+📊 Hash columns detected: ['password_hash', 'ntlm_hash']
+🔓 Do you want to attempt to crack the hashes? (y/n): y
+
+🔧 Available Cracking Tools:
+1) hashcat (installed)
+2) john (installed)
+
+Select a tool [1/2] (1): 1
+Enter hash type or leave empty for auto-detect: 
+Enter path to wordlist [rockyou.txt]: /usr/share/wordlists/rockyou.txt
+
+🚀 Proceed with hashcat using hash file temp_hashes.txt with wordlist rockyou.txt? (y/n): y
+```
+
+**4. Real-time Cracking Progress:**
+```
+┌─ Cracking ──────────────────────────────────┐
+│ hashcat (v6.2.6) starting...              │
+│ Session..........: hashcat                 │
+│ Status...........: Running                 │
+│ Progress.........: 1024/14344385 (0.01%)   │
+│ Speed.#.1........: 2847.3 kH/s (0.92ms)   │
+└─────────────────────────────────────────────┘
+```
+
+**5. Results Integration:**
+```
+✅ Cracking completed successfully.
+📊 Final statistics for query 'example.com':
+   Total entries processed: 25
+   Cracked passwords: 12
+✅ Cracked results saved to output/2025-07-24_example.com_cracked.csv
+✅ Updated PDF report saved to output/2025-07-24_example.com.pdf
+```
+
+### Hash Cracking Features
+
+**🎯 Intelligent Hash Detection:**
+- Automatic identification of hash columns
+- Support for nested JSON fields
+- Pattern-based and content-based detection
+- Common hash formats: MD5, SHA*, NTLM, bcrypt, scrypt
+
+**🔧 Tool Integration:**
+- **Hashcat**: GPU-accelerated cracking with mode auto-detection
+- **John the Ripper**: CPU-based cracking with format detection
+- Automatic tool detection and selection
+- Custom wordlist support
+
+**📈 Progress Monitoring:**
+- Real-time progress display using Rich panels
+- Live updates on cracking status
+- Duration tracking and statistics
+- Success/failure reporting
+
+**💾 Result Management:**
+- Automatic integration of cracked passwords into dataset
+- Separate `_cracked.csv` files for results with cracked passwords
+- Updated PDF reports with cracking statistics
+- Preservation of original data alongside cracked results
+
+### Advanced Hash Cracking
+
+**Custom Hash Types:**
+```python
+# For advanced users: manual hash type specification
+# Hashcat mode examples:
+# 0 = MD5
+# 100 = SHA1  
+# 1000 = NTLM
+# 3200 = bcrypt
+```
+
+**Performance Optimization:**
+```bash
+# GPU acceleration (if available)
+export CUDA_VISIBLE_DEVICES=0
+
+# Custom hashcat options
+export HASHCAT_OPTS="--force --optimized-kernel-enable"
+```
+
+**Batch Processing:**
+```python
+# Process multiple hash types simultaneously
+# v2 automatically handles multiple hash columns
+# Results are merged and presented in unified format
+```
+
+### Hash Cracking Best Practices
+
+**🔒 Security:**
+- Only crack hashes you have authorization to crack
+- Use dedicated, isolated systems for cracking
+- Secure disposal of temporary hash files
+- Follow responsible disclosure practices
+
+**⚡ Performance:**
+- Use GPU acceleration when available (hashcat)
+- Start with smaller, targeted wordlists
+- Consider distributed cracking for large datasets
+- Monitor system resources during intensive operations
+
+**📝 Documentation:**
+- Document cracking attempts and results
+- Maintain audit trails for security assessments
+- Record successful cracking methods for future reference
+- Include cracking statistics in security reports
 
 ## 📁 Output Files
 
@@ -364,17 +555,157 @@ mypy .
 black .
 ```
 
-## 📋 Requirements
+## 📋 Requirements & Dependencies
 
-See `requirements.txt` for detailed dependency list:
+### Core Dependencies (v1 & v2)
 
-- **requests**: HTTP API communication
-- **pandas**: Data processing and CSV export
-- **rich**: Terminal formatting and UI
-- **reportlab**: PDF generation
-- **python-dotenv**: Environment variable management
-- **typer**: CLI framework (for future enhancements)
-- **pillow**: Image processing for PDF reports
+**Essential packages for all functionality:**
+```bash
+# Core API and data processing
+pip install requests>=2.25.0      # HTTP API communication
+pip install pandas>=2.0.0         # Data processing and CSV export
+pip install numpy>=1.21.0         # Numerical operations
+
+# User interface and formatting
+pip install rich>=13.0.0          # Terminal formatting and UI
+pip install python-dotenv>=0.19.0 # Environment variable management
+
+# PDF generation
+pip install reportlab>=4.0.0      # PDF report generation
+pip install pillow>=9.0.0         # Image processing for PDFs
+```
+
+### v2 Enhanced Dependencies
+
+**Additional packages for v2 hash cracking features:**
+```bash
+# Enhanced CLI framework (v2)
+pip install typer>=0.9.0          # Advanced CLI framework
+pip install click>=8.0.0          # CLI utilities
+
+# Console enhancements
+pip install colorama>=0.4.6       # Cross-platform color support
+pip install shellingham>=1.5.0    # Shell detection
+```
+
+### External Tools (Hash Cracking)
+
+**Required for v2 hash cracking functionality:**
+
+| Tool | Purpose | Installation Command |
+|------|---------|---------------------|
+| **Hashcat** | GPU-accelerated hash cracking | `sudo apt install hashcat` (Linux)<br>`brew install hashcat` (macOS)<br>`choco install hashcat` (Windows) |
+| **John the Ripper** | CPU-based hash cracking | `sudo apt install john` (Linux)<br>`brew install john` (macOS)<br>Manual install (Windows) |
+
+### Complete Installation Guide
+
+**Method 1: Automated Installation (Recommended)**
+```bash
+# For v1 compatibility
+pip install -r requirements.txt
+
+# For v2 with all features
+pip install -r requirements_v2.txt
+
+# Verify installation
+python -c "import requests, pandas, rich, reportlab; print('✅ All dependencies installed')"
+```
+
+**Method 2: Manual Step-by-Step**
+```bash
+# Step 1: Core functionality
+pip install requests pandas rich
+
+# Step 2: PDF generation
+pip install reportlab pillow
+
+# Step 3: Configuration management
+pip install python-dotenv
+
+# Step 4: v2 enhancements (optional)
+pip install typer click colorama
+
+# Step 5: Verify installation
+python main.py --help
+```
+
+**Method 3: Development Environment**
+```bash
+# Clone repository
+git clone https://github.com/yourusername/dehashed-tool.git
+cd dehashed-tool
+
+# Create isolated environment
+python -m venv dehashed_env
+source dehashed_env/bin/activate  # Linux/macOS
+# OR
+dehashed_env\Scripts\activate     # Windows
+
+# Install all dependencies
+pip install --upgrade pip
+pip install -r requirements.txt
+
+# Test installation
+python demo_rich_output.py
+```
+
+### Dependency Details
+
+| Package | Version | Purpose | Required For |
+|---------|---------|---------|-------------|
+| **requests** | ≥2.25.0 | HTTP API communication | v1, v2 |
+| **pandas** | ≥2.0.0 | Data processing and CSV export | v1, v2 |
+| **rich** | ≥13.0.0 | Terminal formatting and tables | v1, v2 |
+| **reportlab** | ≥4.0.0 | PDF report generation | v1, v2 |
+| **python-dotenv** | ≥0.19.0 | Environment variable management | v1, v2 |
+| **typer** | ≥0.9.0 | Enhanced CLI framework | v2 only |
+| **pillow** | ≥9.0.0 | Image processing for PDFs | v1, v2 |
+| **numpy** | ≥1.21.0 | Numerical operations | v1, v2 |
+| **colorama** | ≥0.4.6 | Cross-platform color support | v2 only |
+
+### Troubleshooting Dependencies
+
+**Common Installation Issues:**
+
+```bash
+# Issue: pip install fails with permission errors
+# Solution: Use user installation
+pip install --user -r requirements.txt
+
+# Issue: reportlab installation fails
+# Solution: Install build tools first
+# Ubuntu/Debian:
+sudo apt install python3-dev build-essential
+# CentOS/RHEL:
+sudo yum install python3-devel gcc
+# Windows: Install Visual Studio Build Tools
+
+# Issue: Rich not displaying colors
+# Solution: Install colorama
+pip install colorama
+
+# Issue: PDF generation fails
+# Solution: Update pillow and reportlab
+pip install --upgrade pillow reportlab
+```
+
+**Version Compatibility:**
+
+| Python Version | Supported | Notes |
+|----------------|-----------|-------|
+| 3.7 | ✅ | Minimum required version |
+| 3.8 | ✅ | Recommended for stability |
+| 3.9 | ✅ | Full feature support |
+| 3.10 | ✅ | Full feature support |
+| 3.11 | ✅ | Latest features and performance |
+| 3.12 | ✅ | Full support with latest packages |
+
+**Platform-Specific Notes:**
+
+- **Windows**: Some packages require Visual Studio Build Tools
+- **macOS**: Use Homebrew for external tools (hashcat, john)
+- **Linux**: Most packages available through system package manager
+- **Docker**: See `Dockerfile` for containerized deployment
 
 ## 📄 License
 
