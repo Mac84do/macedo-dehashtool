@@ -1,0 +1,20 @@
+# Core Requirements
+requests
+numpy
+
+# Optional Dependencies for Enhanced Features
+# PDF Generation
+reportlab>=4.0.0
+
+# Data Processing & Analysis
+pandas>=2.0.0
+
+# Rich Console Output
+rich>=13.0.0
+
+# Hash Cracking Tools (external binaries required)
+# Note: hashcat and john are external tools, not Python packages
+# These would need to be installed separately:
+# - hashcat: https://hashcat.net/hashcat/
+# - john: https://www.openwall.com/john/
+
