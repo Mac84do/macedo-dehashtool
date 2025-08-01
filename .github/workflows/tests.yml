@@ -44,7 +44,7 @@ jobs:
     - name: Run tests with pytest
       run: |
         # Run the comprehensive test suite
-        python -m pytest test_suite.py -v --cov=. --cov-report=xml
+        python -m pytest tests/test_workflow.py -q --cov=. --cov-report=xml
     
     - name: Run integration tests
       run: |

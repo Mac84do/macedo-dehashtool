@@ -112,10 +112,11 @@ class TestComprehensiveValidation(unittest.TestCase):
         with patch('pandas.DataFrame.to_csv') as mock_to_csv:
             with patch('main_v2.generate_pdf_report') as mock_pdf:
                 with patch('main_v2.console') as mock_console:
-                    mock_pdf.return_value = f'{self.test_dir}/test.pdf'
-                    
-                    # Run the function
-                    perform_api_search('1', 'example.com', 'test@example.com', 'dummy_key')
+                    with patch('rich.prompt.Confirm.ask', return_value=False) as mock_confirm:
+                        mock_pdf.return_value = f'{self.test_dir}/test.pdf'
+                        
+                        # Run the function
+                        perform_api_search('1', 'example.com', 'test@example.com', 'dummy_key')
                     
                     # Check that CSV was attempted to be saved
                     mock_to_csv.assert_called_once()

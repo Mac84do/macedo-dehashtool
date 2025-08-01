@@ -54,7 +54,6 @@ def capture_output(command):
                     break
                 panel = Panel(line.strip(), title="Cracking", border_style="green")
                 live.update(panel)
-                console.refresh()
             process.wait()
 
     return process.returncode
