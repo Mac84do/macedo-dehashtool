@@ -327,35 +327,66 @@ def perform_api_search(search_type, search_value, email, api_key):
             except Exception as e:
                 console.print(f"[yellow]⚠️  PDF generation failed: {str(e)}[/yellow]")
             
-            # Offer to crack hashes
+            # Post-processing options
+            console.print("\n[bold cyan]🔧 Post-Processing Options[/bold cyan]")
+            
+            # Check for hashes
             hash_columns = list_hash_columns(df)
+            
+            # Check for passwords (for analysis)
+            password_count = 0
+            if 'password' in df.columns:
+                password_count = df[df['password'].notna() & (df['password'] != '')].shape[0]
+            
+            # Display what we found
             if hash_columns:
-                hash_confirm = Confirm.ask("Do you want to attempt to crack the hashes? (y/n)", default=False)
-                if hash_confirm:
-                    cracked_results = perform_hash_cracking(df, hash_columns)
-                    if cracked_results is not None:
-                        df = df.merge(cracked_results, on=list(cracked_results.columns.drop('plaintext_password')), how='left')
-                        
-                        # Save cracked results
-                        cracked_file_name = file_name.replace('.csv', '_cracked.csv')
-                        df.to_csv(cracked_file_name, index=False)
-                        console.print(f"[green]✅ Cracked results saved to {cracked_file_name}[/green]")
+                console.print(f"[yellow]🔐 Found {len(hash_columns)} hash column(s) with potential hashes to crack[/yellow]")
+            if password_count > 0:
+                console.print(f"[green]🔑 Found {password_count} plaintext password(s) for analysis[/green]")
+            
+            # Always ask about post-processing if we have any credentials
+            if hash_columns or password_count > 0:
+                # Hash cracking option
+                if hash_columns:
+                    hash_confirm = Confirm.ask("\n🔐 Do you want to attempt to crack the detected hashes?", default=False)
+                    if hash_confirm:
+                        cracked_results = perform_hash_cracking(df, hash_columns)
+                        if cracked_results is not None:
+                            df = df.merge(cracked_results, on=list(cracked_results.columns.drop('plaintext_password')), how='left')
+                            
+                            # Save cracked results
+                            cracked_file_name = file_name.replace('.csv', '_cracked.csv')
+                            df.to_csv(cracked_file_name, index=False)
+                            console.print(f"[green]✅ Cracked results saved to {cracked_file_name}[/green]")
 
-                        # Generate updated PDF
-                        try:
-                            hash_cracking_data = {
-                                'hashes_attempted': len(cracked_results),
-                                'hashes_cracked': cracked_results['plaintext_password'].notnull().sum()
-                            }
-                            pdf_path = create_pdf_from_dataframe_v2(
-                                df,
-                                query,
-                                hash_crack_results=hash_cracking_data,
-                                output_pdf_path=file_name.replace('.csv', '.pdf')
-                            )
-                            console.print(f"[green]✅ Updated PDF report saved to {pdf_path}[/green]")
-                        except Exception as e:
-                            console.print(f"[yellow]⚠️  Failed to update PDF report: {str(e)}[/yellow]")
+                            # Generate updated PDF
+                            try:
+                                hash_cracking_data = {
+                                    'hashes_attempted': len(cracked_results),
+                                    'hashes_cracked': cracked_results['plaintext_password'].notnull().sum()
+                                }
+                                pdf_path = create_pdf_from_dataframe_v2(
+                                    df,
+                                    query,
+                                    hash_crack_results=hash_cracking_data,
+                                    output_pdf_path=file_name.replace('.csv', '.pdf')
+                                )
+                                console.print(f"[green]✅ Updated PDF report saved to {pdf_path}[/green]")
+                            except Exception as e:
+                                console.print(f"[yellow]⚠️  Failed to update PDF report: {str(e)}[/yellow]")
+                
+                # Password analysis option
+                if password_count > 0:
+                    analysis_confirm = Confirm.ask("\n📊 Do you want to perform password analysis (common patterns, weak passwords)?", default=False)
+                    if analysis_confirm:
+                        perform_password_analysis(df, file_name)
+                
+                # Additional options
+                console.print("\n[cyan]Additional Options:[/cyan]")
+                if Confirm.ask("🔍 Generate detailed field summary report?", default=False):
+                    generate_field_summary_report(df, file_name)
+            else:
+                console.print("[yellow]ℹ️  No credentials found for post-processing[/yellow]")
             return True
         else:
             console.print("[bold red]No valid email/password pairs found.[/bold red]")
@@ -364,6 +395,126 @@ def perform_api_search(search_type, search_value, email, api_key):
     except (DeHashedRateLimitError, DeHashedAPIError, DeHashedError) as e:
         console.print(f"[bold red]Error:[/bold red] {str(e)}")
         return False
+
+def perform_password_analysis(df: pd.DataFrame, file_name: str) -> None:
+    """
+    Perform password analysis to identify common patterns and weak passwords.
+    
+    Args:
+        df: DataFrame containing password data
+        file_name: Base file name for saving analysis results
+    """
+    console.print("\n[bold cyan]📊 Password Analysis[/bold cyan]")
+    
+    if 'password' not in df.columns:
+        console.print("[red]No password column found for analysis[/red]")
+        return
+    
+    passwords = df[df['password'].notna() & (df['password'] != '')]['password']
+    
+    if len(passwords) == 0:
+        console.print("[red]No passwords found for analysis[/red]")
+        return
+    
+    # Password strength analysis
+    weak_passwords = []
+    common_patterns = {
+        'contains_name': 0,
+        'contains_year': 0,
+        'simple_pattern': 0,
+        'short_length': 0,
+        'common_passwords': 0
+    }
+    
+    common_weak = ['password', '123456', 'admin', 'letmein', 'welcome', 'qwerty', 'abc123']
+    
+    for pwd in passwords:
+        pwd_str = str(pwd).lower()
+        pwd_len = len(pwd_str)
+        
+        # Check for weak patterns
+        if pwd_len < 8:
+            common_patterns['short_length'] += 1
+            weak_passwords.append(pwd)
+        
+        if any(weak in pwd_str for weak in common_weak):
+            common_patterns['common_passwords'] += 1
+            weak_passwords.append(pwd)
+        
+        if re.search(r'\b(19|20)\d{2}\b', pwd_str):
+            common_patterns['contains_year'] += 1
+        
+        if re.search(r'(123|abc|password|admin)', pwd_str):
+            common_patterns['simple_pattern'] += 1
+    
+    # Display results
+    console.print(f"\n[bold green]Password Analysis Results:[/bold green]")
+    console.print(f"   • Total passwords analyzed: {len(passwords)}")
+    console.print(f"   • Potentially weak passwords: {len(set(weak_passwords))}")
+    console.print(f"   • Short passwords (< 8 chars): {common_patterns['short_length']}")
+    console.print(f"   • Common weak passwords: {common_patterns['common_passwords']}")
+    console.print(f"   • Contains year patterns: {common_patterns['contains_year']}")
+    console.print(f"   • Simple patterns detected: {common_patterns['simple_pattern']}")
+    
+    # Save analysis to file
+    analysis_file = file_name.replace('.csv', '_password_analysis.txt')
+    with open(analysis_file, 'w') as f:
+        f.write("Password Analysis Report\n")
+        f.write("======================\n\n")
+        f.write(f"Total passwords analyzed: {len(passwords)}\n")
+        f.write(f"Potentially weak passwords: {len(set(weak_passwords))}\n")
+        f.write(f"Short passwords (< 8 chars): {common_patterns['short_length']}\n")
+        f.write(f"Common weak passwords: {common_patterns['common_passwords']}\n")
+        f.write(f"Contains year patterns: {common_patterns['contains_year']}\n")
+        f.write(f"Simple patterns detected: {common_patterns['simple_pattern']}\n\n")
+        
+        if weak_passwords:
+            f.write("Potentially Weak Passwords:\n")
+            f.write("-" * 30 + "\n")
+            for pwd in set(weak_passwords):
+                f.write(f"{pwd}\n")
+    
+    console.print(f"[green]✅ Password analysis saved to {analysis_file}[/green]")
+
+def generate_field_summary_report(df: pd.DataFrame, file_name: str) -> None:
+    """
+    Generate a detailed field summary report.
+    
+    Args:
+        df: DataFrame to analyze
+        file_name: Base file name for saving the report
+    """
+    console.print("\n[bold cyan]🔍 Generating Field Summary Report[/bold cyan]")
+    
+    report_file = file_name.replace('.csv', '_field_summary.txt')
+    
+    with open(report_file, 'w') as f:
+        f.write("Detailed Field Summary Report\n")
+        f.write("============================\n\n")
+        f.write(f"Total Records: {len(df)}\n")
+        f.write(f"Total Columns: {len(df.columns)}\n\n")
+        
+        f.write("Column Details:\n")
+        f.write("-" * 50 + "\n")
+        
+        for col in df.columns:
+            non_null_count = df[col].notna().sum()
+            null_count = df[col].isna().sum()
+            unique_count = df[col].nunique()
+            data_type = str(df[col].dtype)
+            
+            f.write(f"\nColumn: {col}\n")
+            f.write(f"  Data Type: {data_type}\n")
+            f.write(f"  Non-null values: {non_null_count}\n")
+            f.write(f"  Null values: {null_count}\n")
+            f.write(f"  Unique values: {unique_count}\n")
+            
+            # Sample values
+            sample_values = df[col].dropna().head(5).tolist()
+            if sample_values:
+                f.write(f"  Sample values: {', '.join(str(v)[:50] for v in sample_values)}\n")
+    
+    console.print(f"[green]✅ Field summary report saved to {report_file}[/green]")
 
 def perform_hash_cracking(df: pd.DataFrame, hash_columns: List[str]) -> Optional[pd.DataFrame]:
     """
