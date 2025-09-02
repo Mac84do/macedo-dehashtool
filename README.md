@@ -30,7 +30,7 @@ python main_v2.py
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.7+-green.svg)
 <a href="https://ko-fi.com/macedo84">
-<img width="100" height="50" alt="image" src="https://github.com/user-attachments/assets/22212ccb-dd5c-4040-a0af-a63aa3b99376"  />
+<img width="30" height="15" alt="image" src="https://github.com/user-attachments/assets/22212ccb-dd5c-4040-a0af-a63aa3b99376"  />
 </a>
 
 ## ✨ Features
