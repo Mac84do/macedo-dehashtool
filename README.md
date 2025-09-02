@@ -29,6 +29,7 @@ python main_v2.py
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.7+-green.svg)
+https://ko-fi.com/macedo84
 
 ## ✨ Features
 
