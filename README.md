@@ -31,7 +31,7 @@ python main_v2.py
 ![Python](https://img.shields.io/badge/python-3.7+-green.svg)
 <a href="https://ko-fi.com/macedo84">
 <img width="45" height="25" alt="image" src="https://github.com/user-attachments/assets/22212ccb-dd5c-4040-a0af-a63aa3b99376"  />
-</a>
+</a>  <------------ buy me Coffee Please
 
 ## ✨ Features
 
